@@ -1,13 +1,21 @@
-from flask import render_template, request, redirect, url_for, Blueprint, flash, session
-from flask_login import login_required, current_user, login_user, logout_user
-from .models import User
-from . import db, bcrypt, mail
-from flask_mail import Message
-import pyotp  
-import datetime
 from functools import wraps
-from flask import session, redirect, url_for, flash
+from mailbox import Message
+from flask import Blueprint, request, jsonify, session, flash, redirect, url_for, render_template
+from flask_login import current_user, login_required, login_user, logout_user
+from app.utils import compute_exam_id, decrypt_with_private_key, encrypt_with_public_key, sign_data, verify_signature
+from .models import User, Exam, db
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import serialization
+from werkzeug.security import check_password_hash
+import json
+import datetime
+import pyotp
 import uuid
+import bcrypt 
+from flask_mail import Mail
+from flask_mail import Message
+from app import mail
 
 main = Blueprint('main', __name__)
 
@@ -21,7 +29,7 @@ def login_post():
     password = request.form.get('password')
     user = User.query.filter_by(email=email).first()
 
-    if not user or not bcrypt.check_password_hash(user.password, password):
+    if not user or not bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
         flash('Please check your login details and try again.', 'danger')
         return redirect(url_for('main.login'))
 
@@ -48,7 +56,6 @@ def login_post():
 
     return redirect(url_for('auth.verify_otp'))
 
-
 @main.route('/verify_email/<token>')
 def verify_email(token):
     user = User.verify_reset_token(token)
@@ -67,20 +74,22 @@ def signup():
         email = request.form.get('email')
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
+        role = request.form.get('role')  # Get the role from the form
 
         if password != confirm_password:
             flash('Passwords do not match!', 'danger')
             return redirect(url_for('main.signup'))
 
-        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-        user = User(email=email, password=hashed_password, role='student', is_verified=False)
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+        user = User(email=email, password=hashed_password, role=role, is_verified=False)
         db.session.add(user)
         db.session.commit()
 
         # Send verification email
         token = user.get_reset_token()
         verify_url = url_for('main.verify_email', token=token, _external=True)
-        msg = Message('Verify Your Email', recipients=[user.email])
+        msg = Message('Verify Your Email', to=[user.email])
         msg.body = f'Please click the link to verify your email: {verify_url}'
         mail.send(msg)
 
@@ -88,6 +97,8 @@ def signup():
         return redirect(url_for('main.login'))
 
     return render_template('signup.html')
+
+# Remaining routes and functions...
 
 def session_protected(func):
     @wraps(func)
@@ -105,6 +116,82 @@ def session_protected(func):
 @session_protected
 def dashboard():
     return render_template('dashboard.html', name=current_user.email)
+
+@main.route('/create_exam', methods=['POST'])
+@login_required
+def create_exam():
+    if current_user.role != 'teacher':
+        return jsonify({'message': 'Unauthorized access'}), 403
+
+    data = request.get_json()
+    exam_id = compute_exam_id(
+        data['subject_name'], data['subject_code'], data['semester'], 
+        data['exam_date'], data['fixed_time'], data['exam_serial_number']
+    )
+    exam_questions = data['questions']
+
+    # Create exam content to be signed and encrypted
+    exam_content = {'exam_id': exam_id, 'questions': exam_questions, 'teacher_email': current_user.email}
+    exam_content_json = json.dumps(exam_content)
+
+    # Sign the exam content
+    private_key = current_user.get_private_key()
+    signature = sign_data(private_key, exam_content_json)
+
+    # Encrypt the exam content and signature with the manager's public key
+    manager = User.query.filter_by(role='manager').first()
+    if not manager:
+        return jsonify({'message': 'Manager not found'}), 404
+    manager_public_key = manager.get_public_key()
+    encrypted_data = encrypt_with_public_key(manager_public_key, exam_content_json + signature.hex())
+
+    exam = Exam(
+        title=data['title'],
+        description=data['description'],
+        start_time=data['start_time'],
+        end_time=data['end_time'],
+        duration=data['duration'],
+        encrypted_data=encrypted_data.hex(),
+        digital_signature=signature.hex()
+    )
+
+    db.session.add(exam)
+    db.session.commit()
+
+    return jsonify({'message': 'Exam created successfully'}), 201
+
+
+@main.route('/decrypt_exam/<int:exam_id>', methods=['GET'])
+@login_required
+def decrypt_exam(exam_id):
+    if current_user.role != 'manager':
+        return jsonify({'message': 'Unauthorized access'}), 403
+
+    exam = Exam.query.get_or_404(exam_id)
+    encrypted_data = bytes.fromhex(exam.encrypted_data)
+    signature = bytes.fromhex(exam.digital_signature)
+
+    # Decrypt the exam content using the manager's private key
+    private_key = current_user.get_private_key()
+    decrypted_content = decrypt_with_private_key(private_key, encrypted_data)
+    
+    # Extract the exam content and verify the signature
+    content_and_signature = decrypted_content.rsplit(signature.hex(), 1)
+    if len(content_and_signature) != 2:
+        return jsonify({'message': 'Decryption failed'}), 400
+
+    exam_content_json, received_signature = content_and_signature
+    exam_content = json.loads(exam_content_json)
+    teacher = User.query.filter_by(email=exam_content['teacher_email']).first()
+    if not teacher:
+        return jsonify({'message': 'Teacher not found'}), 404
+    teacher_public_key = teacher.get_public_key()
+
+    if verify_signature(teacher_public_key, signature, exam_content_json):
+        return jsonify({'exam_content': exam_content, 'signature_verified': True}), 200
+    else:
+        return jsonify({'message': 'Signature verification failed'}), 400
+
 
 @main.route('/logout')
 @login_required

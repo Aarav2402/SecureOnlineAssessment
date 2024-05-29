@@ -1,9 +1,10 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session
-from flask_login import login_user, logout_user, login_required, current_user
-from .models import User
-from . import db, bcrypt, mail
-from flask_mail import Message
-import pyotp
+from functools import wraps
+import bcrypt
+from flask import Blueprint, request, jsonify, session, flash, redirect, url_for, render_template
+from flask_login import current_user, login_required, logout_user
+from app.utils import compute_exam_id, decrypt_with_private_key, encrypt_with_public_key, sign_data, verify_signature
+from .models import User, Exam, db
+from flask_mail import Message  
 import uuid
 
 auth = Blueprint('auth', __name__)

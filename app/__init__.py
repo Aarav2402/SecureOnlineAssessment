@@ -1,6 +1,6 @@
 # __init__.py
 
-from flask import Flask
+from flask import Flask, app
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
@@ -24,6 +24,7 @@ def create_app():
     # Configure the Flask application
     app.config['SECRET_KEY'] = 'jhdhjenddj'
     app.config['SECURITY_PASSWORD_SALT'] = generate_salt() 
+    app.config['BCRYPT_HASH_PREFIX'] = "$2b$"
     db_dir = os.path.join(app.instance_path, 'database')
     os.makedirs(db_dir, exist_ok=True)
     
