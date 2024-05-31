@@ -15,7 +15,7 @@ import uuid
 import bcrypt 
 from flask_mail import Mail
 from flask_mail import Message
-from app import mail
+from app import mail 
 
 main = Blueprint('main', __name__)
 
@@ -84,12 +84,16 @@ def signup():
 
         user = User(email=email, password=hashed_password, role=role, is_verified=False)
         db.session.add(user)
-        db.session.commit()
+        db.session.commit()  # Commit first to get the user ID
+        
+        # Generate key pair
+        user.generate_key_pair()
+        db.session.commit()  # Commit again to save the keys
 
         # Send verification email
         token = user.get_reset_token()
         verify_url = url_for('main.verify_email', token=token, _external=True)
-        msg = Message('Verify Your Email', to=[user.email])
+        msg = Message('Verify Your Email', recipients=[user.email])
         msg.body = f'Please click the link to verify your email: {verify_url}'
         mail.send(msg)
 
@@ -97,6 +101,7 @@ def signup():
         return redirect(url_for('main.login'))
 
     return render_template('signup.html')
+
 
 # Remaining routes and functions...
 
@@ -115,7 +120,12 @@ def session_protected(func):
 @login_required
 @session_protected
 def dashboard():
-    return render_template('dashboard.html', name=current_user.email)
+    if current_user.role == 'teacher':
+        return render_template('dashboard.html', name=current_user.email)
+    elif current_user.role == 'student':
+        return render_template('student_dashboard.html', name=current_user.email)
+    else:
+        return render_template('dashboard.html', name=current_user.email)
 
 @main.route('/create_exam', methods=['POST'])
 @login_required

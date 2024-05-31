@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <style>
+        /* Add your CSS styles here */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Welcome, {{ name }}</h2>
+        <h3>Available Exams</h3>
+        {% for exam in exams %}
+        <div class="exam">
+            <h4>{{ exam.title }}</h4>
+            <p>{{ exam.description }}</p>
+            <p>Start Time: {{ exam.start_time }}</p>
+            <p>End Time: {{ exam.end_time }}</p>
+            <p>Duration: {{ exam.duration }} minutes</p>
+            {% if exam.published %}
+            <a href="{{ url_for('main.take_exam', exam_id=exam.id) }}">Take Exam</a>
+            {% else %}
+            <p>This exam is not yet published.</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+        <div class="logout">
+            <a href="{{ url_for('main.logout') }}">Logout</a>
+        </div>
+    </div>
+</body>
+</html>

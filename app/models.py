@@ -1,3 +1,5 @@
+import base64
+import os
 from flask import current_app
 from itsdangerous import Serializer
 from . import db
@@ -6,6 +8,9 @@ from . import login_manager
 import pyotp
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -35,18 +40,74 @@ class User(db.Model, UserMixin):
             encryption_algorithm=serialization.NoEncryption()
         )
 
+        # Encrypt the private key before storing
+        encrypted_private_key = self.encrypt_private_key(private_pem)
+
         # Serialize public key
         public_pem = public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
 
-        self.private_key = private_pem.decode('utf-8')
+        self.private_key = base64.b64encode(encrypted_private_key).decode('utf-8')
         self.public_key = public_pem.decode('utf-8')
         db.session.commit()
 
+    def encrypt_private_key(self, private_pem):
+        # Generate a random salt
+        salt = os.urandom(16)
+
+        # Derive a key from the salt and a password
+        password = b'super_secret_password'  # Use a secure method to store and retrieve this password
+        kdf = Scrypt(
+            salt=salt,
+            length=32,
+            n=2**14,
+            r=8,
+            p=1,
+            backend=default_backend()
+        )
+        key = kdf.derive(password)
+
+        # Encrypt the private key using AES
+        iv = os.urandom(16)
+        cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
+        encryptor = cipher.encryptor()
+        encrypted_private_key = encryptor.update(private_pem) + encryptor.finalize()
+
+        return salt + iv + encrypted_private_key + encryptor.tag
+
+    def decrypt_private_key(self):
+        # Decode the base64 encoded private key
+        encrypted_private_key = base64.b64decode(self.private_key.encode('utf-8'))
+
+        # Extract the salt, IV, encrypted private key, and tag
+        salt = encrypted_private_key[:16]
+        iv = encrypted_private_key[16:32]
+        tag = encrypted_private_key[-16:]
+        encrypted_private_key = encrypted_private_key[32:-16]
+
+        # Derive the key using the same method as encryption
+        password = b'super_secret_password'  # Use a secure method to store and retrieve this password
+        kdf = Scrypt(
+            salt=salt,
+            length=32,
+            n=2**14,
+            r=8,
+            p=1,
+            backend=default_backend()
+        )
+        key = kdf.derive(password)
+
+        # Decrypt the private key using AES
+        cipher = Cipher(algorithms.AES(key), modes.GCM(iv, tag), backend=default_backend())
+        decryptor = cipher.decryptor()
+        private_key = decryptor.update(encrypted_private_key) + decryptor.finalize()
+
+        return serialization.load_pem_private_key(private_key, password=None)
+
     def get_private_key(self):
-        return serialization.load_pem_private_key(self.private_key.encode('utf-8'), password=None)
+        return self.decrypt_private_key()
 
     def get_public_key(self):
         return serialization.load_pem_public_key(self.public_key.encode('utf-8'))
