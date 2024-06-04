@@ -3,32 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Dashboard</title>
+    <title>Create Exam</title>
     <style>
-        /* Add your CSS styles here */
+        /* Your CSS styles here */
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Welcome, {{ name }}</h2>
-        <h3>Create Exam</h3>
-        <form action="{{ url_for('main.create_exam') }}" method="POST">
-            <label for="title">Title:</label><br>
+        <h1>Create Exam</h1>
+        <form id="createExamForm" action="{{ url_for('main.create_exam') }}" method="POST">
+            <label for="title">Title:</label>
             <input type="text" id="title" name="title" required><br>
-            <label for="description">Description:</label><br>
-            <textarea id="description" name="description" required></textarea><br>
-            <label for="start_time">Start Time:</label><br>
+
+            <label for="description">Description:</label>
+            <textarea id="description" name="description" rows="4" required></textarea><br>
+
+            <label for="start_time">Start Time:</label>
             <input type="datetime-local" id="start_time" name="start_time" required><br>
-            <label for="end_time">End Time:</label><br>
+            
+            <label for="end_time">End Time:</label>
             <input type="datetime-local" id="end_time" name="end_time" required><br>
-            <label for="duration">Duration (minutes):</label><br>
+            
+
+            <label for="duration">Duration (in minutes):</label>
             <input type="number" id="duration" name="duration" required><br>
-            <!-- Add other exam details fields here -->
+
+            <label for="subject_name">Subject Name:</label>
+            <input type="text" id="subject_name" name="subject_name" required><br>
+
+            <label for="subject_code">Subject Code:</label>
+            <input type="text" id="subject_code" name="subject_code" required><br>
+
+            <label for="semester">Semester:</label>
+            <input type="text" id="semester" name="semester" required><br>
+
+            <label for="exam_date">Exam Date:</label>
+            <input type="date" id="exam_date" name="exam_date" required><br>
+
+            <label for="fixed_time">Fixed Time:</label>
+            <input type="time" id="fixed_time" name="fixed_time" required><br>
+
+            <label>Questions:</label>
+            <div id="questionsContainer">
+                <!-- Questions will be dynamically added here -->
+            </div>
+
+            <button type="button" class="add-question-btn" onclick="addMCQQuestion()">Add MCQ Question</button>
+            <button type="button" class="add-question-btn" onclick="addSubjectiveQuestion()">Add Subjective Question</button><br>
+
             <button type="submit">Create Exam</button>
         </form>
+
         <div class="logout">
             <a href="{{ url_for('main.logout') }}">Logout</a>
         </div>
     </div>
+    <script>
+        function addMCQQuestion() {
+            const questionsContainer = document.getElementById('questionsContainer');
+
+            const mcqQuestion = document.createElement('div');
+            mcqQuestion.classList.add('question-container');
+            mcqQuestion.innerHTML = `
+                <label>MCQ Question:</label>
+                <input type="text" name="questions[]" required>
+                <label>Options (comma-separated):</label>
+                <input type="text" name="options[]" required>
+                <label>Correct Answer:</label>
+                <input type="text" name="correct_answers[]" required>
+            `;
+
+            questionsContainer.appendChild(mcqQuestion);
+        }
+
+        function addSubjectiveQuestion() {
+            const questionsContainer = document.getElementById('questionsContainer');
+
+            const subjectiveQuestion = document.createElement('div');
+            subjectiveQuestion.classList.add('question-container');
+            subjectiveQuestion.innerHTML = `
+                <label>Subjective Question:</label>
+                <input type="text" name="questions[]" required>
+            `;
+
+            questionsContainer.appendChild(subjectiveQuestion);
+        }
+    </script>
 </body>
 </html>

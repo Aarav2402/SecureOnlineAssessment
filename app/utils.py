@@ -1,6 +1,10 @@
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import serialization
+import os
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 def compute_exam_id(subject_name, subject_code, semester, exam_date, fixed_time, exam_serial_number):
     return f"{subject_name}_{subject_code}_{semester}_{exam_date}_{fixed_time}_{exam_serial_number}"
@@ -16,16 +20,59 @@ def sign_data(private_key, data):
     )
     return signature
 
+# def encrypt_with_public_key(public_key, data):
+
+#     ciphertext = public_key.encrypt(
+#         data.encode('utf-8'),
+#         padding.OAEP(
+#             mgf=padding.MGF1(algorithm=hashes.SHA256()),
+#             algorithm=hashes.SHA256(),
+#             label=None
+#         )
+#     )
+#     return ciphertext
+
+
 def encrypt_with_public_key(public_key, data):
-    ciphertext = public_key.encrypt(
-        data.encode('utf-8'),
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
+    try:
+        # Debug: Print manager's public key
+        print("Manager's Public Key:", public_key)
+
+        # Debug: Verify the type of the public key
+        print("Public Key Type:", type(public_key))
+
+        # Debug: Verify the length of the public key
+        print("Public Key Length:", public_key.key_size)
+
+        # Generate a random AES key
+        aes_key = os.urandom(32)
+
+        # Encrypt data using AES
+        iv = os.urandom(16)
+        cipher = Cipher(algorithms.AES(aes_key), modes.CFB(iv), backend=default_backend())
+        encryptor = cipher.encryptor()
+        encrypted_data = encryptor.update(data.encode('utf-8')) + encryptor.finalize()
+
+        # Encrypt AES key using RSA
+        encrypted_aes_key = public_key.encrypt(
+            aes_key,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
         )
-    )
-    return ciphertext
+
+        # Debug: Print encrypted data
+        print("Encrypted AES Key:", encrypted_aes_key)
+
+        return encrypted_aes_key, encrypted_data
+    except Exception as e:
+        # Debug: Print any encryption errors
+        print("Encryption Error:", e)
+        raise  # Re-raise the exception for further handling
+
+
 
 def decrypt_with_private_key(private_key, ciphertext):
     plaintext = private_key.decrypt(

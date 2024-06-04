@@ -111,6 +111,13 @@ class User(db.Model, UserMixin):
 
     def get_public_key(self):
         return serialization.load_pem_public_key(self.public_key.encode('utf-8'))
+    
+    def get_public_key_by_user_id(user_id):
+        user = User.query.get(user_id)
+        if user:
+            return user.get_public_key()
+        else:
+            return None
 
     def get_reset_token(self, expires_sec=1800):
         s = Serializer(current_app.config['SECRET_KEY'], expires_sec)
@@ -153,9 +160,10 @@ class Exam(db.Model):
     start_time = db.Column(db.DateTime)
     end_time = db.Column(db.DateTime)
     duration = db.Column(db.Integer)  # Duration of the exam in minutes
-    questions = db.relationship('Question', backref='exam', lazy=True)
+    # questions = db.Column(db.Text, nullable=True)
     encrypted_data = db.Column(db.Text, nullable=True)  # Store encrypted exam data
     digital_signature = db.Column(db.Text, nullable=True)  # Store digital signature of the exam
+    encrypted_aes_key = db.Column(db.Text, nullable=True)  # Store encrypted AES key
 
     def __repr__(self):
         return '<Exam %r>' % self.title
