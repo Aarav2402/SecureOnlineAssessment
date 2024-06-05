@@ -164,6 +164,11 @@ class Exam(db.Model):
     encrypted_data = db.Column(db.Text, nullable=True)  # Store encrypted exam data
     digital_signature = db.Column(db.Text, nullable=True)  # Store digital signature of the exam
     encrypted_aes_key = db.Column(db.Text, nullable=True)  # Store encrypted AES key
+    subject_name = db.Column(db.String(120), nullable=False)
+    subject_code = db.Column(db.String(120), nullable=False)
+    semester = db.Column(db.String(120), nullable=False)
+    exam_date = db.Column(db.Date, nullable=False)
+    is_approved = db.Column(db.Boolean, default=False)  # New column
 
     def __repr__(self):
         return '<Exam %r>' % self.title

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Exam</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>{{ exam.title }}</h1>
+    <p>{{ exam.description }}</p>
+    <form action="{{ url_for('main.submit_exam', exam_id=exam.id) }}" method="POST">
+        {% for question in exam.questions %}
+        <div class="question">
+            <h3>{{ loop.index }}. {{ question.text }}</h3>
+            <ul>
+                {% for option in question.options %}
+                <li>
+                    <input type="radio" name="question_{{ loop.index }}" value="{{ option }}">
+                    {{ option }}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+        <input type="submit" value="Submit Exam">
+    </form>
+</body>
+</html>

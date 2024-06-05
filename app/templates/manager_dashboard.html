@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Dashboard</title>
+    <title>Manager Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Welcome, Student</h1>
+    <h1>Welcome, Manager</h1>
     <nav>
         <ul>
-            <li><a href="{{ url_for('main.view_available_exams') }}">Available Exams</a></li>
-            <li><a href="{{ url_for('main.view_submitted_exams') }}">Submitted Exams</a></li>
+            <li><a href="{{ url_for('main.create_exam') }}">Create Exam</a></li>
+            <li><a href="{{ url_for('main.view_pending_exams') }}">View All Exams</a></li>
             <li><a href="{{ url_for('main.logout') }}">Logout</a></li>
         </ul>
     </nav>
     <section>
-        <h2>Available Exams</h2>
+        <h2>Pending Exams for Approval</h2>
         <table>
             <thead>
                 <tr>
@@ -27,13 +27,13 @@
                 </tr>
             </thead>
             <tbody>
-                {% for exam in available_exams %}
+                {% for exam in pending_exams %}
                 <tr>
                     <td>{{ exam.id }}</td>
                     <td>{{ exam.title }}</td>
                     <td>{{ exam.subject_name }}</td>
                     <td>
-                        <a href="{{ url_for('main.submit_exam', exam_id=exam.id) }}">Take Exam</a>
+                        <a href="{{ url_for('main.decrypt_exam', exam_id=exam.id) }}">Approve Exam</a>
                     </td>
                 </tr>
                 {% endfor %}

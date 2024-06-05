@@ -35,15 +35,6 @@ def sign_data(private_key, data):
 
 def encrypt_with_public_key(public_key, data):
     try:
-        # Debug: Print manager's public key
-        print("Manager's Public Key:", public_key)
-
-        # Debug: Verify the type of the public key
-        print("Public Key Type:", type(public_key))
-
-        # Debug: Verify the length of the public key
-        print("Public Key Length:", public_key.key_size)
-
         # Generate a random AES key
         aes_key = os.urandom(32)
 
@@ -63,16 +54,9 @@ def encrypt_with_public_key(public_key, data):
             )
         )
 
-        # Debug: Print encrypted data
-        print("Encrypted AES Key:", encrypted_aes_key)
-
-        return encrypted_aes_key, encrypted_data
+        return encrypted_aes_key, iv + encrypted_data  # Include IV with encrypted data
     except Exception as e:
-        # Debug: Print any encryption errors
-        print("Encryption Error:", e)
         raise  # Re-raise the exception for further handling
-
-
 
 def decrypt_with_private_key(private_key, ciphertext):
     plaintext = private_key.decrypt(
