@@ -5,6 +5,170 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Take Exam</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script>
+        // Disable right-clicking to prevent copying
+        window.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+        });
+
+        // Disable Ctrl+C and Ctrl+V to prevent copying and pasting
+        document.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C' || e.key === 'v' || e.key === 'V')) {
+                e.preventDefault();
+            }
+        });
+
+        // Function to enter fullscreen mode
+        function enterFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.mozRequestFullScreen) { // Firefox
+                elem.mozRequestFullScreen();
+            } else if (elem.webkitRequestFullscreen) { // Chrome, Safari and Opera
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) { // IE/Edge
+                elem.msRequestFullscreen();
+            }
+        }
+
+        // Enter fullscreen mode on page load
+        window.onload = function() {
+            enterFullscreen();
+        };
+
+        // Prevent opening new tabs or windows with keyboard shortcuts
+        document.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 't' || e.key === 'n')) {
+                e.preventDefault();
+                var confirmed = confirm("Are you sure you want to open a new tab or window? Doing so will log you out of the exam and save your current progress.");
+                if (confirmed) {
+                    window.removeEventListener('beforeunload', handleBeforeUnload);
+                    window.open('about:blank', '_blank');
+                }
+            }
+        });
+
+        // Prevent opening new tabs with middle mouse button
+        window.addEventListener('mousedown', function (e) {
+            if (e.button === 1) { // Middle mouse button
+                e.preventDefault();
+                showConfirmationWithTimeout("Are you sure you want to open a new tab or window? Doing so will log you out of the exam and save your current progress.", 5000, function(confirmed) {
+                    if (confirmed) {
+                        window.removeEventListener('beforeunload', handleBeforeUnload);
+                        window.open('about:blank', '_blank');
+                    }
+                });
+            }
+        });
+
+        function handleBeforeUnload(e) {
+            var confirmationMessage = 'Are you sure you want to leave the page? Your progress will be lost.';
+            (e || window.event).returnValue = confirmationMessage;
+            return confirmationMessage;
+        }
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        // Track exit from fullscreen and visibility changes
+        document.addEventListener('fullscreenchange', function () {
+            if (!document.fullscreenElement) {
+                var confirmed = confirm("You have exited fullscreen mode. You must remain in fullscreen mode until the exam is submitted. Do you want to continue?");
+                if (confirmed) {
+                    enterFullscreen();
+                } else {
+                    logoutUser();
+                }
+            }
+        });
+
+        document.addEventListener('mozfullscreenchange', function () {
+            if (!document.mozFullScreenElement) {
+                var confirmed = confirm("You have exited fullscreen mode. You must remain in fullscreen mode until the exam is submitted. Do you want to continue?");
+                if (confirmed) {
+                    enterFullscreen();
+                } else {
+                    logoutUser();
+                }
+            }
+        });
+
+        document.addEventListener('webkitfullscreenchange', function () {
+            if (!document.webkitFullscreenElement) {
+                var confirmed = confirm("You have exited fullscreen mode. You must remain in fullscreen mode until the exam is submitted. Do you want to continue?");
+                if (confirmed) {
+                    enterFullscreen();
+                } else {
+                    logoutUser();
+                }
+            }
+        });
+
+        document.addEventListener('msfullscreenchange', function () {
+            if (!document.msFullscreenElement) {
+                var confirmed = confirm("You have exited fullscreen mode. You must remain in fullscreen mode until the exam is submitted. Do you want to continue?");
+                if (confirmed) {
+                    enterFullscreen();
+                } else {
+                    logoutUser();
+                }
+            }
+        });
+
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) {
+                var confirmed = confirm("You have switched tabs or minimized the browser. You must remain in fullscreen mode until the exam is submitted. Do you want to continue with you exam?");
+                if (confirmed) {
+                    enterFullscreen();
+                } else {
+                    logoutUser();
+                }
+            }
+        });
+
+        // Function to show confirmation dialog with timeout
+        function showConfirmationWithTimeout(message, timeout, callback) {
+            let confirmed = false;
+            const confirmationDialog = confirm(message);
+            if (confirmationDialog) {
+                confirmed = true;
+                callback(true);
+            }
+
+            const timer = setTimeout(function () {
+                if (!confirmed) {
+                    callback(false);
+                    logoutUser();
+                }
+            }, timeout);
+
+        // If user clicks cancel, clear the timeout and set confirmed to true
+        window.addEventListener('click', function (event) {
+            if (event.target.nodeName === 'BUTTON' && event.target.textContent.toLowerCase() === 'cancel') {
+                clearTimeout(timer);
+                confirmed = true;
+            }
+    });
+}
+
+        // Prevent exiting fullscreen until the exam is submitted
+        document.getElementById('submit').addEventListener
+        ('click', function () {
+            // Allow exiting fullscreen after submission
+            document.removeEventListener('fullscreenchange', enterFullscreen);
+            document.removeEventListener('mozfullscreenchange', enterFullscreen);
+            document.removeEventListener('webkitfullscreenchange', enterFullscreen);
+            document.removeEventListener('msfullscreenchange', enterFullscreen);
+            document.removeEventListener('visibilitychange', enterFullscreen);
+            // Optionally, show a message with the shortcut to exit fullscreen
+            alert("You have submitted your exam. Press F11 to exit fullscreen mode.");
+        });
+
+        // Function to logout user (redirect to logout or any other page)
+        function logoutUser() {
+            window.location.href = "{{ url_for('main.logout') }}"; // Adjust URL as needed
+        }
+    </script>
 </head>
 <body>
     <h1>Exam Questions</h1>
@@ -12,6 +176,7 @@
         {% for question_index in range(exam_content|length) %}
         {% set question = exam_content[question_index] %}
         <h4>Question {{ question_index + 1 }}</h4>
+        <p>{{ question.text }}</p> <!-- Include the question text here -->
         {% if question.options %}
         <ul>
             {% for option_index in range(4) %}
@@ -24,11 +189,11 @@
             {% endfor %}
         </ul>
         {% else %}
-        <textarea name="answer_{{ question_index + 1 }}" rows="4" cols="50" required></textarea>
+        <textarea name="answer_{{ question_index + 1 }}" rows="4" cols="50" required oncopy="return false" onpaste="return false"></textarea>
         {% endif %}
         {% endfor %}
         <input type="hidden" name="exam_id" value="{{ exam_id }}">
-        <button type="submit">Submit Answers</button>
+        <button type="submit" id="submit">Submit Answers</button>
     </form>
 </body>
 </html>
