@@ -60,7 +60,7 @@ def create_app():
         app.register_blueprint(auth_blueprint)
 
         # Create database tables
-        from .models import User, Exam, Question, Response, Grade
+        from .models import User, Exam, Submission, Grade
         db.create_all()
 
     return app

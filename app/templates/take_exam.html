@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take Exam</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>Exam Questions</h1>
+    <form action="{{ url_for('main.submit_exam') }}" method="post">
+        {% for question_index in range(exam_content|length) %}
+        {% set question = exam_content[question_index] %}
+        <h4>Question {{ question_index + 1 }}</h4>
+        {% if question.options %}
+        <ul>
+            {% for option_index in range(4) %}
+            {% set option_value = question.options[option_index] if option_index < question.options|length else '' %}
+            <li>
+                {% set radio_name = 'question_' + (question_index + 1)|string %}
+                <input type="radio" name="{{ radio_name }}" value="{{ option_value }}">
+                {{ option_value }}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <textarea name="answer_{{ question_index + 1 }}" rows="4" cols="50" required></textarea>
+        {% endif %}
+        {% endfor %}
+        <input type="hidden" name="exam_id" value="{{ exam_id }}">
+        <button type="submit">Submit Answers</button>
+    </form>
+</body>
+</html>

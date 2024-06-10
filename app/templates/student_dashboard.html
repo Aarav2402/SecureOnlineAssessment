@@ -11,12 +11,11 @@
     <nav>
         <ul>
             <li><a href="{{ url_for('main.view_available_exams') }}">Available Exams</a></li>
-            <li><a href="{{ url_for('main.view_submitted_exams') }}">Submitted Exams</a></li>
             <li><a href="{{ url_for('main.logout') }}">Logout</a></li>
         </ul>
     </nav>
     <section>
-        <h2>Available Exams</h2>
+        <h2>Available Exams:</h2>
         <table>
             <thead>
                 <tr>
@@ -33,7 +32,7 @@
                     <td>{{ exam.title }}</td>
                     <td>{{ exam.subject_name }}</td>
                     <td>
-                        <a href="{{ url_for('main.submit_exam', exam_id=exam.id) }}">Take Exam</a>
+                        <a href="{{ url_for('main.request_exam', exam_id=exam.id) }}">Take Exam</a>
                     </td>
                 </tr>
                 {% endfor %}

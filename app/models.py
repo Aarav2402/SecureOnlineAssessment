@@ -160,7 +160,6 @@ class Exam(db.Model):
     start_time = db.Column(db.DateTime)
     end_time = db.Column(db.DateTime)
     duration = db.Column(db.Integer)  # Duration of the exam in minutes
-    # questions = db.Column(db.Text, nullable=True)
     encrypted_data = db.Column(db.Text, nullable=True)  # Store encrypted exam data
     digital_signature = db.Column(db.Text, nullable=True)  # Store digital signature of the exam
     encrypted_aes_key = db.Column(db.Text, nullable=True)  # Store encrypted AES key
@@ -168,32 +167,34 @@ class Exam(db.Model):
     subject_code = db.Column(db.String(120), nullable=False)
     semester = db.Column(db.String(120), nullable=False)
     exam_date = db.Column(db.Date, nullable=False)
-    is_approved = db.Column(db.Boolean, default=False)  # New column
+    is_approved = db.Column(db.Boolean, default=False) 
+    computed_exam_id = db.Column(db.String(100), unique=True)  
+    encrypted_for_student = db.Column(db.Text, nullable=True)
+    encrypted_for_teacher = db.Column(db.Text, nullable=True)
+    encrypted_for_manager = db.Column(db.Text, nullable=True)
+    encrypted_aes_key_for_student = db.Column(db.Text, nullable=True)
+    encrypted_aes_key_for_teacher = db.Column(db.Text, nullable=True)
+    encrypted_aes_key_for_manager = db.Column(db.Text, nullable=True)
+    signature_student = db.Column(db.Text, nullable=True)
+    signature_teacher = db.Column(db.Text, nullable=True)
+    signature_manager = db.Column(db.Text, nullable=True)
 
     def __repr__(self):
         return '<Exam %r>' % self.title
 
-class Question(db.Model):
+class Submission(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    text = db.Column(db.Text, nullable=False)
-    type = db.Column(db.String(20), nullable=False)  # Type of question (e.g., multiple choice, essay)
-    options = db.Column(db.Text, nullable=True)  # Options for MCQs, stored as a JSON string
-    exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'), nullable=False)
+    student_id = db.Column(db.Integer, nullable=False)
+    exam_id = db.Column(db.Integer, db.ForeignKey('exam.computed_exam_id'), nullable=False)
+    encrypted_submission = db.Column(db.Text)
+    manager_signature = db.Column(db.Text)
+    submission_time = db.Column(db.DateTime)
+    masked_answer_id = db.Column(db.String(120))
+    final_signature = db.Column(db.Text)
+    encrypted_teacher_data = db.Column(db.Text)
 
     def __repr__(self):
-        return '<Question %r>' % self.text
-
-class Response(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'), nullable=False)
-    question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False)
-    response = db.Column(db.Text, nullable=False)
-    timestamp = db.Column(db.DateTime, nullable=False)
-    marks_obtained = db.Column(db.Integer)
-
-    def __repr__(self):
-        return '<Response %r>' % self.id
+        return '<Submission %r>' % self.text
 
 class Grade(db.Model):
     id = db.Column(db.Integer, primary_key=True)
