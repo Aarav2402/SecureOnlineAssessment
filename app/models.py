@@ -17,11 +17,11 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
     is_verified = db.Column(db.Boolean, default=False)
-    role = db.Column(db.String(20), nullable=False)  # For distinguishing between student, teacher, manager
-    otp_secret = db.Column(db.String(16), nullable=True)  # Add this field for OTP
-    session_id = db.Column(db.String(100), nullable=True)  # Add this field for session tracking
-    private_key = db.Column(db.Text, nullable=True)  # Private key
-    public_key = db.Column(db.Text, nullable=True)  # Public key
+    role = db.Column(db.String(20), nullable=False)  
+    otp_secret = db.Column(db.String(16), nullable=True)  
+    session_id = db.Column(db.String(100), nullable=True) 
+    private_key = db.Column(db.Text, nullable=True) 
+    public_key = db.Column(db.Text, nullable=True) 
 
     def __repr__(self):
         return '<User %r>' % self.email
@@ -33,17 +33,14 @@ class User(db.Model, UserMixin):
         )
         public_key = private_key.public_key()
 
-        # Serialize private key
         private_pem = private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.PKCS8,
             encryption_algorithm=serialization.NoEncryption()
         )
 
-        # Encrypt the private key before storing
         encrypted_private_key = self.encrypt_private_key(private_pem)
 
-        # Serialize public key
         public_pem = public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
@@ -54,11 +51,10 @@ class User(db.Model, UserMixin):
         db.session.commit()
 
     def encrypt_private_key(self, private_pem):
-        # Generate a random salt
         salt = os.urandom(16)
 
-        # Derive a key from the salt and a password
-        password = b'super_secret_password'  # Use a secure method to store and retrieve this password
+       
+        password = b'super_secret_password'  
         kdf = Scrypt(
             salt=salt,
             length=32,
@@ -69,7 +65,6 @@ class User(db.Model, UserMixin):
         )
         key = kdf.derive(password)
 
-        # Encrypt the private key using AES
         iv = os.urandom(16)
         cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
         encryptor = cipher.encryptor()
@@ -78,17 +73,15 @@ class User(db.Model, UserMixin):
         return salt + iv + encrypted_private_key + encryptor.tag
 
     def decrypt_private_key(self):
-        # Decode the base64 encoded private key
+        
         encrypted_private_key = base64.b64decode(self.private_key.encode('utf-8'))
 
-        # Extract the salt, IV, encrypted private key, and tag
         salt = encrypted_private_key[:16]
         iv = encrypted_private_key[16:32]
         tag = encrypted_private_key[-16:]
         encrypted_private_key = encrypted_private_key[32:-16]
 
-        # Derive the key using the same method as encryption
-        password = b'super_secret_password'  # Use a secure method to store and retrieve this password
+        password = b''  
         kdf = Scrypt(
             salt=salt,
             length=32,
@@ -99,7 +92,6 @@ class User(db.Model, UserMixin):
         )
         key = kdf.derive(password)
 
-        # Decrypt the private key using AES
         cipher = Cipher(algorithms.AES(key), modes.GCM(iv, tag), backend=default_backend())
         decryptor = cipher.decryptor()
         private_key = decryptor.update(encrypted_private_key) + decryptor.finalize()
@@ -135,7 +127,7 @@ class User(db.Model, UserMixin):
     def get_otp_secret(self):
         if not self.otp_secret:
             self.otp_secret = pyotp.random_base32()
-            db.session.commit()  # Save the OTP secret to the database
+            db.session.commit() 
         return self.otp_secret
 
     def generate_otp(self):
@@ -159,10 +151,10 @@ class Exam(db.Model):
     description = db.Column(db.Text)
     start_time = db.Column(db.DateTime)
     end_time = db.Column(db.DateTime)
-    duration = db.Column(db.Integer)  # Duration of the exam in minutes
-    encrypted_data = db.Column(db.Text, nullable=True)  # Store encrypted exam data
-    digital_signature = db.Column(db.Text, nullable=True)  # Store digital signature of the exam
-    encrypted_aes_key = db.Column(db.Text, nullable=True)  # Store encrypted AES key
+    duration = db.Column(db.Integer)  
+    encrypted_data = db.Column(db.Text, nullable=True)  
+    digital_signature = db.Column(db.Text, nullable=True)  
+    encrypted_aes_key = db.Column(db.Text, nullable=True)  
     subject_name = db.Column(db.String(120), nullable=False)
     subject_code = db.Column(db.String(120), nullable=False)
     semester = db.Column(db.String(120), nullable=False)
